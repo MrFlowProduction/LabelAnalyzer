@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="hu.mrflow.labelanalyzer.view.MainController"
+            stylesheets="@style.css">
+
+    <!-- ── Menüsor ─────────────────────────────────────────────────────── -->
+    <top>
+        <MenuBar fx:id="menuBar">
+            <Menu text="Fájl">
+                <MenuItem fx:id="newProjectMenuItem"   text="Új projekt"    onAction="#onNewProject"/>
+                <SeparatorMenuItem/>
+                <MenuItem fx:id="settingsMenuItem"     text="Beállítások…"  onAction="#onSettings"/>
+                <SeparatorMenuItem/>
+                <MenuItem fx:id="exitMenuItem"         text="Kilépés"       onAction="#onExit"/>
+            </Menu>
+            <Menu text="Súgó">
+                <MenuItem fx:id="aboutMenuItem"        text="Névjegy"       onAction="#onAbout"/>
+            </Menu>
+        </MenuBar>
+    </top>
+
+    <!-- ── Fő tartalom: bal lista + jobb detail ────────────────────────── -->
+    <center>
+        <SplitPane fx:id="mainSplitPane" dividerPositions="0.22">
+            <!-- Bal oldal: projektlista (include) -->
+            <fx:include fx:id="projectList" source="ProjectListView.fxml"/>
+            <!-- Jobb oldal: részletek + eredmény (include) -->
+            <fx:include fx:id="projectDetail" source="ProjectDetailView.fxml"/>
+        </SplitPane>
+    </center>
+
+</BorderPane>

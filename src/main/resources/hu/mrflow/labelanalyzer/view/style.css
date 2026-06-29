@@ -1,0 +1,157 @@
+/* ── Base ──────────────────────────────────────────────────────────────── */
+.root {
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-background-color: #f5f6fa;
+}
+
+/* ── Project list panel ─────────────────────────────────────────────────── */
+.project-list-panel {
+    -fx-background-color: #2c3e50;
+    -fx-min-width: 210px;
+    -fx-pref-width: 230px;
+}
+
+.project-list-panel .panel-title {
+    -fx-text-fill: #ecf0f1;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 0 4 4;
+}
+
+.project-list-panel .list-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.project-list-panel .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 6 8;
+}
+
+.project-list-panel .list-cell:selected {
+    -fx-background-color: #3498db;
+    -fx-background-radius: 4;
+}
+
+.project-name {
+    -fx-text-fill: #ecf0f1;
+    -fx-font-weight: bold;
+}
+
+.project-status {
+    -fx-text-fill: #bdc3c7;
+    -fx-font-size: 11px;
+}
+
+/* ── Detail panel ──────────────────────────────────────────────────────── */
+.detail-panel {
+    -fx-background-color: #f5f6fa;
+}
+
+.project-detail-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 10 12 6 12;
+}
+
+.file-label {
+    -fx-text-fill: #555;
+    -fx-font-size: 12px;
+}
+
+/* ── Run button ────────────────────────────────────────────────────────── */
+.run-button {
+    -fx-background-color: #27ae60;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 9 18;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+}
+
+.run-button:hover {
+    -fx-background-color: #2ecc71;
+}
+
+.run-button:disabled {
+    -fx-background-color: #95a5a6;
+    -fx-text-fill: #ecf0f1;
+}
+
+.status-label {
+    -fx-text-fill: #7f8c8d;
+    -fx-font-size: 12px;
+}
+
+/* ── Result tabs ───────────────────────────────────────────────────────── */
+.result-tabs {
+    -fx-background-color: white;
+    -fx-border-color: #ddd;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.result-tabs .tab-header-area {
+    -fx-padding: 4 0 0 4;
+}
+
+.result-tabs .tab {
+    -fx-background-color: #ecf0f1;
+    -fx-padding: 5 12;
+}
+
+.result-tabs .tab:selected {
+    -fx-background-color: white;
+    -fx-border-color: #3498db;
+    -fx-border-width: 0 0 2 0;
+}
+
+/* ── Diff text areas ────────────────────────────────────────────────────── */
+.diff-label-old {
+    -fx-font-weight: bold;
+    -fx-text-fill: #c0392b;
+}
+
+.diff-label-new {
+    -fx-font-weight: bold;
+    -fx-text-fill: #27ae60;
+}
+
+.review-note {
+    -fx-text-fill: #e67e22;
+    -fx-font-style: italic;
+}
+
+/* ── Info rows ──────────────────────────────────────────────────────────── */
+.info-key {
+    -fx-font-weight: bold;
+    -fx-text-fill: #555;
+}
+
+.empty-label {
+    -fx-text-fill: #aaa;
+    -fx-font-size: 14px;
+}
+
+/* ── Warnings ───────────────────────────────────────────────────────────── */
+.warning-error   { -fx-border-color: #e74c3c; -fx-border-width: 0 0 0 4; }
+.warning-warning { -fx-border-color: #f39c12; -fx-border-width: 0 0 0 4; }
+.warning-info    { -fx-border-color: #3498db; -fx-border-width: 0 0 0 4; }
+
+/* ── Table ──────────────────────────────────────────────────────────────── */
+.table-view {
+    -fx-background-color: white;
+    -fx-border-color: #e0e0e0;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #fafbfc;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #d6eaf8;
+    -fx-text-fill: black;
+}

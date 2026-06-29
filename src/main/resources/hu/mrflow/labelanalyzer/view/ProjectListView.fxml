@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="hu.mrflow.labelanalyzer.view.ProjectListController"
+      styleClass="project-list-panel"
+      spacing="6">
+
+    <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
+
+    <Label text="Projektek" styleClass="panel-title"/>
+
+    <ListView fx:id="projectListView" VBox.vgrow="ALWAYS"/>
+
+    <HBox spacing="6">
+        <Button fx:id="addProjectButton"    text="+ Új"    onAction="#onAddProject"    maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+        <Button fx:id="removeProjectButton" text="Törlés"  onAction="#onRemoveProject" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+</VBox>

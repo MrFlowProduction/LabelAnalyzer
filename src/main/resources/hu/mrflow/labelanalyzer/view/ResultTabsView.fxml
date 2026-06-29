@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<TabPane xmlns="http://javafx.com/javafx/21"
+         xmlns:fx="http://javafx.com/fxml/1"
+         fx:controller="hu.mrflow.labelanalyzer.view.ResultTabsController"
+         fx:id="resultTabPane"
+         tabClosingPolicy="UNAVAILABLE"
+         styleClass="result-tabs"
+         VBox.vgrow="ALWAYS">
+
+    <!-- ── Tab 1: Összefoglaló ──────────────────────────────────────────── -->
+    <Tab text="Összefoglaló" fx:id="summaryTab">
+        <ScrollPane fitToWidth="true">
+            <VBox spacing="8" styleClass="summary-box">
+                <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
+
+                <Label text="Projekt adatok" styleClass="section-header"/>
+                <GridPane hgap="12" vgap="6">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="200"/>
+                        <ColumnConstraints hgrow="ALWAYS"/>
+                    </columnConstraints>
+                    <Label text="Termék neve:"           GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="info-key"/>
+                    <Label fx:id="productNameLabel"      GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                    <Label text="Ország:"                GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="info-key"/>
+                    <Label fx:id="countryLabel"          GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                    <Label text="Nyelv:"                 GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="info-key"/>
+                    <Label fx:id="languageLabel"         GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                    <Label text="Régi engedély száma:"   GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="info-key"/>
+                    <Label fx:id="oldAuthLabel"          GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                    <Label text="Új engedély száma:"     GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="info-key"/>
+                    <Label fx:id="newAuthLabel"          GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                </GridPane>
+
+                <Separator/>
+
+                <Label text="Elemzés összesítője" styleClass="section-header"/>
+                <GridPane hgap="12" vgap="6">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="200"/>
+                        <ColumnConstraints hgrow="ALWAYS"/>
+                    </columnConstraints>
+                    <Label text="Határozatbeli különbségek:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="info-key"/>
+                    <Label fx:id="diffCountLabel"            GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                    <Label text="Javasolt módosítások:"      GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="info-key"/>
+                    <Label fx:id="changeCountLabel"          GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                    <Label text="Figyelmeztetések:"          GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="info-key"/>
+                    <Label fx:id="warnCountLabel"            GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                </GridPane>
+            </VBox>
+        </ScrollPane>
+    </Tab>
+
+    <!-- ── Tab 2: Határozatban talált különbségek ──────────────────────── -->
+    <Tab text="Határozat-különbségek" fx:id="differencesTab">
+        <VBox spacing="8">
+            <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
+
+            <TableView fx:id="differencesTable" VBox.vgrow="ALWAYS" >
+                <columns>
+                    <TableColumn fx:id="diffIdCol"       text="ID"          prefWidth="120"/>
+                    <TableColumn fx:id="diffCategoryCol" text="Kategória"   prefWidth="120"/>
+                    <TableColumn fx:id="diffFieldCol"    text="Mező"        prefWidth="150"/>
+                    <TableColumn fx:id="diffTypeCol"     text="Változás"    prefWidth="110"/>
+                    <TableColumn fx:id="diffOldCol"      text="Régi érték"  prefWidth="200"/>
+                    <TableColumn fx:id="diffNewCol"      text="Új érték"    prefWidth="200"/>
+                    <TableColumn fx:id="diffImpactCol"   text="Hatás"       prefWidth="260"/>
+                </columns>
+            </TableView>
+
+            <TextArea fx:id="differenceDetailArea"
+                      editable="false"
+                      wrapText="true"
+                      prefRowCount="6"
+                      promptText="Válassz egy sort a részletek megtekintéséhez…"/>
+        </VBox>
+    </Tab>
+
+    <!-- ── Tab 3: Javasolt módosítások ─────────────────────────────────── -->
+    <Tab text="Javasolt módosítások" fx:id="changesTab">
+        <SplitPane orientation="VERTICAL" dividerPositions="0.55">
+
+            <TableView fx:id="changesTable">
+                <columns>
+                    <TableColumn fx:id="chgStatusCol"     text="Státusz"       prefWidth="110"/>
+                    <TableColumn fx:id="chgIdCol"         text="ID"            prefWidth="110"/>
+                    <TableColumn fx:id="chgOperationCol"  text="Művelet"       prefWidth="130"/>
+                    <TableColumn fx:id="chgConfidenceCol" text="Megbízhatóság" prefWidth="110"/>
+                    <TableColumn fx:id="chgSectionCol"    text="Fejezet"       prefWidth="160"/>
+                    <TableColumn fx:id="chgPageCol"       text="Oldal"         prefWidth="60"/>
+                    <TableColumn fx:id="chgReasonCol"     text="Ok"            prefWidth="260"/>
+                </columns>
+            </TableView>
+
+            <VBox spacing="6">
+                <padding><Insets top="6" right="6" bottom="6" left="6"/></padding>
+                <Label text="Régi szöveg:" styleClass="diff-label-old"/>
+                <TextArea fx:id="oldTextArea"  editable="false" wrapText="true" prefRowCount="4"/>
+                <Label text="Új szöveg:" styleClass="diff-label-new"/>
+                <TextArea fx:id="newTextArea"  editable="false" wrapText="true" prefRowCount="4"/>
+                <Label fx:id="reviewNoteLabel" styleClass="review-note" wrapText="true"/>
+            </VBox>
+        </SplitPane>
+    </Tab>
+
+    <!-- ── Tab 4: Figyelmeztetések ─────────────────────────────────────── -->
+    <Tab text="Figyelmeztetések" fx:id="warningsTab">
+        <ScrollPane fitToWidth="true">
+            <VBox fx:id="warningsBox" spacing="8">
+                <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+            </VBox>
+        </ScrollPane>
+    </Tab>
+
+    <!-- ── Tab 5: Változatlan fejezetek ────────────────────────────────── -->
+    <Tab text="Változatlan fejezetek" fx:id="unchangedTab">
+        <VBox>
+            <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
+            <TableView fx:id="unchangedTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="unchangedSectionCol" text="Fejezet"  prefWidth="280"/>
+                    <TableColumn fx:id="unchangedReasonCol"  text="Indoklás" prefWidth="500"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </Tab>
+
+</TabPane>
