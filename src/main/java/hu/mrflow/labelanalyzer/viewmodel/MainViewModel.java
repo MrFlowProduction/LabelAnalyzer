@@ -45,6 +45,8 @@ public class MainViewModel extends BaseViewModel {
                 listViewModel.getProjects().set(idx, p);
             }
         });
+
+        detailViewModel.loadProject(listViewModel.getSelectedProject());
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────────

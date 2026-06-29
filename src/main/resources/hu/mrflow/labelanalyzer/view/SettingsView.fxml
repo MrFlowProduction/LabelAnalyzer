@@ -3,13 +3,10 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
 
-<!--
-    Ezt a DialogPane-t a SettingsController tölti be és egy Dialog-ba helyezi.
--->
 <DialogPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="hu.mrflow.labelanalyzer.view.SettingsController"
-            prefWidth="580" prefHeight="540">
+            prefWidth="580" prefHeight="560">
 
     <header>
         <Label text="Beállítások" styleClass="settings-header"/>
@@ -20,7 +17,6 @@
             <VBox spacing="14">
                 <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
 
-                <!-- Aktív provider -->
                 <HBox spacing="12" alignment="CENTER_LEFT">
                     <Label text="Aktív AI szolgáltató:" minWidth="180"/>
                     <ComboBox fx:id="providerCombo" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
@@ -41,7 +37,8 @@
                         <Label text="Végpont URL:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                         <TextField fx:id="openAiEndpointField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
                         <Label text="Modell:"      GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                        <TextField fx:id="openAiModelField"    GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        <ComboBox fx:id="openAiModelCombo"     GridPane.rowIndex="2" GridPane.columnIndex="1"
+                                  maxWidth="Infinity" editable="true"/>
                     </GridPane>
                 </TitledPane>
 
@@ -58,7 +55,8 @@
                         <Label text="Végpont URL:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                         <TextField fx:id="anthropicEndpointField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
                         <Label text="Modell:"      GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                        <TextField fx:id="anthropicModelField"    GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        <ComboBox fx:id="anthropicModelCombo"  GridPane.rowIndex="2" GridPane.columnIndex="1"
+                                  maxWidth="Infinity" editable="true"/>
                     </GridPane>
                 </TitledPane>
 
@@ -75,7 +73,8 @@
                         <Label text="Végpont URL:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
                         <TextField fx:id="geminiEndpointField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
                         <Label text="Modell:"      GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                        <TextField fx:id="geminiModelField"    GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        <ComboBox fx:id="geminiModelCombo"     GridPane.rowIndex="2" GridPane.columnIndex="1"
+                                  maxWidth="Infinity" editable="true"/>
                     </GridPane>
                 </TitledPane>
 

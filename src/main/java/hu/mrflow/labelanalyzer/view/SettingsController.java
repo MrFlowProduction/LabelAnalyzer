@@ -5,28 +5,21 @@ import hu.mrflow.labelanalyzer.viewmodel.AppSettingsViewModel;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 
-/**
- * Controller a SettingsView.fxml-hez.
- * Kétirányú binding minden mezőre – a save() delegál a ViewModel-be.
- */
 public class SettingsController {
 
     @FXML private ComboBox<AppConfig.AiProvider> providerCombo;
 
-    // OpenAI
     @FXML private TextField openAiKeyField;
     @FXML private TextField openAiEndpointField;
-    @FXML private TextField openAiModelField;
+    @FXML private ComboBox<String> openAiModelCombo;
 
-    // Anthropic
     @FXML private TextField anthropicKeyField;
     @FXML private TextField anthropicEndpointField;
-    @FXML private TextField anthropicModelField;
+    @FXML private ComboBox<String> anthropicModelCombo;
 
-    // Gemini
     @FXML private TextField geminiKeyField;
     @FXML private TextField geminiEndpointField;
-    @FXML private TextField geminiModelField;
+    @FXML private ComboBox<String> geminiModelCombo;
 
     private AppSettingsViewModel viewModel;
 
@@ -39,24 +32,40 @@ public class SettingsController {
         providerCombo.setCellFactory(lv -> providerCell());
         providerCombo.valueProperty().bindBidirectional(vm.selectedProviderProperty());
 
-        // Kétirányú binding minden szövegmezőre
+        // OpenAI
         openAiKeyField.textProperty().bindBidirectional(vm.openAiKeyProperty());
         openAiEndpointField.textProperty().bindBidirectional(vm.openAiEndpointProperty());
-        openAiModelField.textProperty().bindBidirectional(vm.openAiModelProperty());
+        openAiModelCombo.setItems(vm.getOpenAiModels());
+        openAiModelCombo.valueProperty().bindBidirectional(vm.openAiModelProperty());
 
+        // Anthropic
         anthropicKeyField.textProperty().bindBidirectional(vm.anthropicKeyProperty());
         anthropicEndpointField.textProperty().bindBidirectional(vm.anthropicEndpointProperty());
-        anthropicModelField.textProperty().bindBidirectional(vm.anthropicModelProperty());
+        anthropicModelCombo.setItems(vm.getAnthropicModels());
+        anthropicModelCombo.valueProperty().bindBidirectional(vm.anthropicModelProperty());
 
+        // Gemini
         geminiKeyField.textProperty().bindBidirectional(vm.geminiKeyProperty());
         geminiEndpointField.textProperty().bindBidirectional(vm.geminiEndpointProperty());
-        geminiModelField.textProperty().bindBidirectional(vm.geminiModelProperty());
+        geminiModelCombo.setItems(vm.getGeminiModels());
+        geminiModelCombo.valueProperty().bindBidirectional(vm.geminiModelProperty());
     }
 
-    /** Meghívja a ViewModel save()-jét; a MainController hívja OK gomb után. */
     public void save() {
-        if (viewModel != null) viewModel.save();
+        // Editable ComboBox esetén a kézzel begépelt értéket is el kell menteni
+        if (openAiModelCombo.getEditor() != null) {
+            vm().openAiModelProperty().set(openAiModelCombo.getEditor().getText());
+        }
+        if (anthropicModelCombo.getEditor() != null) {
+            vm().anthropicModelProperty().set(anthropicModelCombo.getEditor().getText());
+        }
+        if (geminiModelCombo.getEditor() != null) {
+            vm().geminiModelProperty().set(geminiModelCombo.getEditor().getText());
+        }
+        viewModel.save();
     }
+
+    private AppSettingsViewModel vm() { return viewModel; }
 
     private ListCell<AppConfig.AiProvider> providerCell() {
         return new ListCell<>() {

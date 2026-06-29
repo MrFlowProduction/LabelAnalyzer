@@ -2,25 +2,30 @@ package hu.mrflow.labelanalyzer.model;
 
 import java.io.File;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
-/**
- * Represents one analysis project: three input files + optional result.
- */
 public class AnalysisProject {
 
+    private final String id;
     private String name;
-    private File oldDecisionFile;   // régi határozat (PDF or DOCX)
-    private File newDecisionFile;   // új határozat (PDF or DOCX)
-    private File labelFile;         // jelenlegi címkeszöveg (DOCX)
+    private File oldDecisionFile;
+    private File newDecisionFile;
+    private File labelFile;
     private AnalysisResult result;
     private LocalDateTime lastRun;
-    private String status = "Pending"; // Pending | Running | Done | Error
+    private String status = "Pending";
 
     public AnalysisProject(String name) {
+        this.id   = UUID.randomUUID().toString();
         this.name = name;
     }
 
-    // ── Getters / Setters ─────────────────────────────────────────────────────
+    public AnalysisProject(String name, String id) {
+        this.id   = id;
+        this.name = name;
+    }
+
+    public String getId()   { return id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -50,4 +55,3 @@ public class AnalysisProject {
     @Override
     public String toString() { return name; }
 }
-

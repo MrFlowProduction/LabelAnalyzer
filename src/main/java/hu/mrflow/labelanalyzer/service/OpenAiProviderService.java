@@ -2,6 +2,8 @@ package hu.mrflow.labelanalyzer.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hu.mrflow.labelanalyzer.config.AppConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.http.*;
@@ -15,6 +17,8 @@ public class OpenAiProviderService implements AiProviderService {
 
     private final AppConfig config = AppConfig.getInstance();
     private final ObjectMapper mapper = new ObjectMapper();
+    private static final Logger log = LoggerFactory.getLogger(OpenAiProviderService.class);
+
 
     @Override
     public String analyze(String systemPrompt,
@@ -22,12 +26,15 @@ public class OpenAiProviderService implements AiProviderService {
                           String newDecision,
                           String labelText) throws Exception {
 
+        log.info("Start Analyze by OpenAI");
+
         AppConfig.AiProvider provider = AppConfig.AiProvider.OPENAI;
         String apiKey   = config.getApiKey(provider);
         String endpoint = config.getEndpoint(provider);
         String model    = config.getModel(provider);
 
         if (apiKey == null || apiKey.isBlank()) {
+            log.error("OpenAI API key is not configured.");
             throw new IllegalStateException("OpenAI API key is not configured.");
         }
 
@@ -36,7 +43,7 @@ public class OpenAiProviderService implements AiProviderService {
         // Build request body
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("model", model);
-        requestBody.put("temperature", 0);
+        //requestBody.put("temperature", 0);
         requestBody.put("response_format", Map.of("type", "json_object"));
         requestBody.put("messages", List.of(
                 Map.of("role", "system", "content", systemPrompt),
@@ -44,6 +51,7 @@ public class OpenAiProviderService implements AiProviderService {
         ));
 
         String json = mapper.writeValueAsString(requestBody);
+        log.debug("Request JSON for OPEN AI: " + json);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(endpoint))
@@ -60,11 +68,13 @@ public class OpenAiProviderService implements AiProviderService {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
+            log.error("OpenAI API error " + response.statusCode() + ": " + response.body());
             throw new RuntimeException("OpenAI API error " + response.statusCode() + ": " + response.body());
         }
 
         // Extract content from response
         var responseJson = mapper.readTree(response.body());
+        log.debug("Response JSON from OpenAI: " + responseJson);
         return responseJson
                 .path("choices").get(0)
                 .path("message")

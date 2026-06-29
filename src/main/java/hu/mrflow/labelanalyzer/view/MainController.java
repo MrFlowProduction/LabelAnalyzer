@@ -5,6 +5,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Alert;
 import javafx.scene.control.DialogPane;
+import javafx.scene.control.MenuBar;
 import javafx.stage.Window;
 
 import java.io.IOException;
@@ -24,6 +25,7 @@ public class MainController {
     // a mező neve: <fx:id>Controller konvenció szerint.
     @FXML private ProjectListController   projectListController;
     @FXML private ProjectDetailController projectDetailController;
+    @FXML private MenuBar menuBar;
 
     private MainViewModel mainViewModel;
 
@@ -96,8 +98,8 @@ public class MainController {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private Window getWindow() {
-        // Bármely injektált controller scene-jéből előkerítjük az ablakot
-        return projectListController.getRoot().getScene().getWindow();
+        // A stage-t a menuBar-ból kérjük el, ami biztosan injektálódik
+        return menuBar.getScene().getWindow();
     }
 
     private void showError(String msg) {
