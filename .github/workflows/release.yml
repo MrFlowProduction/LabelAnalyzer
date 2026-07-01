@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       platform:
-        description: 'Melyik platformra buildeljünk?'
+        description: 'Melyik platformra buildeljunk?'
         required: true
         default: 'all'
         type: choice
@@ -17,13 +17,12 @@ on:
           - macos
           - macos-arm
       version:
-        description: 'Verziószám (pl. 1.0.0)'
+        description: 'Verzioszam (pl. 1.0.0)'
         required: false
         default: 'dev'
 
 jobs:
 
-  # ── Windows ZIP ─────────────────────────────────────────────────────────────
   build-windows:
     name: Windows ZIP
     runs-on: windows-latest
@@ -36,16 +35,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: JDK 23 telepítése
+      - name: JDK 23 telepitese
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '23'
 
-      - name: Maven build (Windows profil)
+      - name: Maven build
         run: mvn -B package -P win -DskipTests
 
-      - name: Verziószám meghatározása
+      - name: Verzioszam meghatározasa
         id: version
         shell: bash
         run: |
@@ -55,205 +54,95 @@ jobs:
             echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Fat jar megkeresése
-        id: jarname
+      - name: Fat jar atmasolasa
         shell: bash
         run: |
           JAR=$(ls target/*.jar | grep -v "original" | head -1)
-          echo "Talált jar: $JAR"
+          echo "Jar: $JAR"
           echo "path=$JAR" >> $GITHUB_OUTPUT
+        id: jarname
 
-      - name: Temurin 23 JRE letöltése (Windows)
+      - name: Temurin 23 JRE letoltese
         shell: pwsh
         run: |
           $url = "https://github.com/adoptium/temurin23-binaries/releases/download/jdk-23.0.2%2B7/OpenJDK23U-jre_x64_windows_hotspot_23.0.2_7.zip"
-          Write-Host "JRE letöltése..."
           Invoke-WebRequest -Uri $url -OutFile "jre.zip"
           Expand-Archive -Path "jre.zip" -DestinationPath "jre-temp"
           $jreDir = (Get-ChildItem "jre-temp" -Directory | Select-Object -First 1).FullName
           Move-Item $jreDir "runtime"
-          Write-Host "runtime\bin tartalma:"
+          Write-Host "JRE bin:"
           Get-ChildItem "runtime\bin\" -Filter "*.exe" | Format-Table Name
 
-      - name: JavaFX 23 SDK letöltése (Windows)
+      - name: JavaFX 23 SDK letoltese
         shell: pwsh
         run: |
           $url = "https://download2.gluonhq.com/openjfx/23.0.2/openjfx-23.0.2_windows-x64_bin-sdk.zip"
-          Write-Host "JavaFX SDK letöltése..."
           Invoke-WebRequest -Uri $url -OutFile "javafx.zip"
           Expand-Archive -Path "javafx.zip" -DestinationPath "javafx-temp"
           $fxDir = (Get-ChildItem "javafx-temp" -Directory | Select-Object -First 1).FullName
           Move-Item $fxDir "javafx-sdk"
-          Write-Host "javafx-sdk\lib tartalma:"
-          Get-ChildItem "javafx-sdk\lib\" -Filter "*.jar" | Format-Table Name
-          Write-Host "javafx-sdk\bin tartalma (dll-ek):"
-          Get-ChildItem "javafx-sdk\bin\" -Filter "*.dll" | Format-Table Name
 
-      - name: App mappa összerakása
+      - name: App mappa osszerakasa
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "app-dist\runtime" -Force | Out-Null
           New-Item -ItemType Directory -Path "app-dist\app"     -Force | Out-Null
           New-Item -ItemType Directory -Path "app-dist\javafx"  -Force | Out-Null
-
-          # JRE
-          Copy-Item -Path "runtime\*" -Destination "app-dist\runtime" -Recurse -Force
-
-          # JavaFX: lib (jar-ok) + bin (dll-ek) → ugyanabba a javafx\ mappába
-          Copy-Item -Path "javafx-sdk\lib\*" -Destination "app-dist\javafx" -Recurse -Force
-          Copy-Item -Path "javafx-sdk\bin\*" -Destination "app-dist\javafx" -Recurse -Force
-
-          # Fat jar
+          Copy-Item -Path "runtime\*"          -Destination "app-dist\runtime" -Recurse -Force
+          Copy-Item -Path "javafx-sdk\lib\*"   -Destination "app-dist\javafx"  -Recurse -Force
+          Copy-Item -Path "javafx-sdk\bin\*"   -Destination "app-dist\javafx"  -Recurse -Force
           Copy-Item -Path "${{ steps.jarname.outputs.path }}" -Destination "app-dist\app\app.jar"
-
-          Write-Host "=== Ellenőrzés ==="
-          Write-Host "runtime\bin exe-k:"
-          Get-ChildItem "app-dist\runtime\bin\" -Filter "*.exe" | Format-Table Name
           Write-Host "javafx dll-ek:"
           Get-ChildItem "app-dist\javafx\" -Filter "*.dll" | Format-Table Name
-          Write-Host "javafx jar-ok:"
-          Get-ChildItem "app-dist\javafx\" -Filter "*.jar" | Format-Table Name
 
-      - name: ICO fájl generálása PNG-kből
+      - name: ICO generalasa
         shell: pwsh
         run: |
           pip install pillow --quiet
-          python3 << 'PYEOF'
-          from PIL import Image
-          import os
+          python scripts/make_ico.py
 
-          icon_dir = "src/main/resources/hu/mrflow/labelanalyzer/icon"
-          sizes = [16, 24, 32, 48, 64, 128, 256]
-          images = []
-          for size in sizes:
-              path = f"{icon_dir}/icon-{size}.png"
-              if os.path.exists(path):
-                  img = Image.open(path).convert("RGBA")
-                  images.append(img)
-                  print(f"Hozzáadva: {path}")
-
-          if images:
-              images[0].save(
-                  "app.ico",
-                  format="ICO",
-                  append_images=images[1:],
-                  sizes=[(img.width, img.height) for img in images]
-              )
-              print("app.ico elkészült")
-          else:
-              print("HIBA: Nem találhatók PNG ikonok!")
-              exit(1)
-          PYEOF
-
-      - name: Launch4j letöltése és telepítése
+      - name: Launch4j letoltese
         shell: pwsh
         run: |
           $url = "https://sourceforge.net/projects/launch4j/files/launch4j-3/3.50/launch4j-3.50-win32.zip/download"
-          Write-Host "Launch4j letöltése..."
           Invoke-WebRequest -Uri $url -OutFile "launch4j.zip" -UserAgent "Mozilla/5.0"
           Expand-Archive -Path "launch4j.zip" -DestinationPath "."
-          Write-Host "Launch4j kicsomagolva"
-          Get-ChildItem "launch4j" | Format-Table Name
+          Write-Host "Launch4j:"
+          Get-ChildItem "launch4j\" | Format-Table Name
 
-      - name: Launch4j konfiguráció generálása
+      - name: Launch4j config generalasa
         shell: pwsh
-        run: |
-          $jarPath = (Resolve-Path "app-distpppp.jar").Path
-          $icoPath = (Resolve-Path "app.ico").Path
-          $xml = @"
-          <?xml version="1.0" encoding="UTF-8"?>
-          <launch4jConfig>
-            <headerType>gui</headerType>
-            <outfile>app-dist\LabelAnalyzer.exe</outfile>
-            <jar>app-distpppp.jar</jar>
-            <errTitle>LabelAnalyzer</errTitle>
-            <icon>app.ico</icon>
-            <classPath>
-              <mainClass>hu.mrflow.labelanalyzer.MainApp</mainClass>
-            </classPath>
-            <jre>
-              <path>runtime</path>
-              <bundledJre64Bit>true</bundledJre64Bit>
-              <opts>
-                <opt>--module-path javafx</opt>
-                <opt>--add-modules javafx.controls,javafx.fxml</opt>
-              </opts>
-            </jre>
-            <versionInfo>
-              <fileVersion>1.0.0.0</fileVersion>
-              <txtFileVersion>${{ steps.version.outputs.value }}</txtFileVersion>
-              <fileDescription>Novenyvedoszer engedelyelemzo</fileDescription>
-              <copyright>MrFlow</copyright>
-              <productVersion>1.0.0.0</productVersion>
-              <txtProductVersion>${{ steps.version.outputs.value }}</txtProductVersion>
-              <productName>LabelAnalyzer</productName>
-              <internalName>LabelAnalyzer</internalName>
-              <originalFilename>LabelAnalyzer.exe</originalFilename>
-            </versionInfo>
-          </launch4jConfig>
-          "@
-          $xml | Out-File -FilePath "launch4j-config.xml" -Encoding UTF8
-          Write-Host "launch4j-config.xml elkészült"
+        run: python scripts/make_launch4j_config.py "${{ steps.version.outputs.value }}"
 
-      - name: LabelAnalyzer.exe generálása Launch4j-vel
+      - name: LabelAnalyzer.exe generalasa
         shell: cmd
         run: |
           launch4j\launch4jc.exe launch4j-config.xml
           if exist app-dist\LabelAnalyzer.exe (
-            echo LabelAnalyzer.exe sikeresen elkeszult
+            echo LabelAnalyzer.exe elkeszult
           ) else (
-            echo HIBA: LabelAnalyzer.exe nem jott letre!
+            echo HIBA: LabelAnalyzer.exe nem jott letre
             exit /b 1
           )
 
-      - name: Batch fájlok létrehozása
+      - name: Batch fajlok generalasa
+        shell: pwsh
+        run: python scripts/make_bat.py
+
+      - name: ZIP keszitese
         shell: pwsh
         run: |
-          # ── LabelAnalyzer.bat – normál indítás (javaw, nincs konzol ablak) ──
-          $run = "@echo off" + [char]13 + [char]10
-          $run += "cd /d ""%~dp0""" + [char]13 + [char]10
-          $run += "set PATH=%~dp0javafx;%PATH%" + [char]13 + [char]10
-          $run += "mkdir ""%USERPROFILE%\.labelanalyzer\logs"" 2>nul" + [char]13 + [char]10
-          $run += "runtime\bin\javaw.exe --module-path ""javafx"" --add-modules javafx.controls,javafx.fxml -jar ""app\app.jar""" + [char]13 + [char]10
-          [System.IO.File]::WriteAllText("app-dist\LabelAnalyzer.bat", $run, [System.Text.Encoding]::ASCII)
-
-          # ── debug.bat – konzol + log fájl ──
-          $dbg = "@echo off" + [char]13 + [char]10
-          $dbg += "cd /d ""%~dp0""" + [char]13 + [char]10
-          $dbg += "set PATH=%~dp0javafx;%PATH%" + [char]13 + [char]10
-          $dbg += "mkdir ""%USERPROFILE%\.labelanalyzer\logs"" 2>nul" + [char]13 + [char]10
-          $dbg += "echo Inditom a LabelAnalyzert..." + [char]13 + [char]10
-          $dbg += "runtime\bin\java.exe --module-path ""javafx"" --add-modules javafx.controls,javafx.fxml -jar ""app\app.jar"" > ""%USERPROFILE%\.labelanalyzer\logs\startup.log"" 2>&1" + [char]13 + [char]10
-          $dbg += "echo." + [char]13 + [char]10
-          $dbg += "echo Kilepes kodja: %ERRORLEVEL%" + [char]13 + [char]10
-          $dbg += "echo Log: %USERPROFILE%\.labelanalyzer\logs\startup.log" + [char]13 + [char]10
-          $dbg += "echo." + [char]13 + [char]10
-          $dbg += "type ""%USERPROFILE%\.labelanalyzer\logs\startup.log""" + [char]13 + [char]10
-          $dbg += "pause" + [char]13 + [char]10
-          [System.IO.File]::WriteAllText("app-dist\debug.bat", $dbg, [System.Text.Encoding]::ASCII)
-
-          Write-Host "=== LabelAnalyzer.bat ==="
-          Get-Content "app-dist\LabelAnalyzer.bat"
-          Write-Host "=== debug.bat ==="
-          Get-Content "app-dist\debug.bat"
-
-      - name: ZIP készítése
-        shell: pwsh
-        run: |
-          Compress-Archive `
-            -Path "app-dist\*" `
-            -DestinationPath "LabelAnalyzer-windows-${{ steps.version.outputs.value }}.zip"
+          Compress-Archive -Path "app-dist\*" -DestinationPath "LabelAnalyzer-windows-${{ steps.version.outputs.value }}.zip"
           $size = (Get-Item "LabelAnalyzer-windows-${{ steps.version.outputs.value }}.zip").Length / 1MB
-          Write-Host "ZIP mérete: $([math]::Round($size, 1)) MB"
+          Write-Host "ZIP: $([math]::Round($size, 1)) MB"
 
-      - name: Artifact feltöltése
+      - name: Artifact feltoltese
         uses: actions/upload-artifact@v5
         with:
           name: windows-zip
           path: LabelAnalyzer-windows-*.zip
           retention-days: 30
 
-  # ── macOS Intel ZIP ─────────────────────────────────────────────────────────
   build-macos:
     name: macOS Intel ZIP
     runs-on: macos-latest
@@ -266,16 +155,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: JDK 23 telepítése
+      - name: JDK 23 telepitese
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '23'
 
-      - name: Maven build (Mac profil)
+      - name: Maven build
         run: mvn -B package -P mac -DskipTests
 
-      - name: Verziószám meghatározása
+      - name: Verzioszam
         id: version
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
@@ -284,57 +173,43 @@ jobs:
             echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Fat jar megkeresése
+      - name: Fat jar megkeresese
         id: jarname
         run: |
           JAR=$(ls target/*.jar | grep -v "original" | head -1)
           echo "path=$JAR" >> $GITHUB_OUTPUT
 
-      - name: Temurin 23 JRE letöltése (macOS Intel)
+      - name: JRE letoltese
         run: |
           URL="https://github.com/adoptium/temurin23-binaries/releases/download/jdk-23.0.2%2B7/OpenJDK23U-jre_x64_mac_hotspot_23.0.2_7.tar.gz"
           curl -L -o jre.tar.gz "$URL"
           tar -xzf jre.tar.gz
-          JRE_DIR=$(ls -d */ | grep -i jdk | head -1)
-          mv "$JRE_DIR" runtime
+          mv $(ls -d */ | grep -i jdk | head -1) runtime
 
-      - name: JavaFX 23 SDK letöltése (macOS Intel)
+      - name: JavaFX SDK letoltese
         run: |
           URL="https://download2.gluonhq.com/openjfx/23.0.2/openjfx-23.0.2_osx-x64_bin-sdk.zip"
           curl -L -o javafx.zip "$URL"
           unzip -q javafx.zip
-          FX_DIR=$(ls -d */ | grep -i javafx | head -1)
-          mv "$FX_DIR" javafx-sdk
+          mv $(ls -d */ | grep -i javafx | head -1) javafx-sdk
 
-      - name: App mappa összerakása és ZIP
+      - name: App osszerakasa es ZIP
         run: |
           mkdir -p app-dist/runtime app-dist/app app-dist/javafx
           cp -r runtime/* app-dist/runtime/
           cp -r javafx-sdk/lib/* app-dist/javafx/
           cp "${{ steps.jarname.outputs.path }}" app-dist/app/app.jar
-
-          cat > app-dist/LabelAnalyzer.sh << 'SHEOF'
-          #!/bin/bash
-          DIR="$(cd "$(dirname "$0")" && pwd)"
-          export DYLD_LIBRARY_PATH="$DIR/javafx:$DYLD_LIBRARY_PATH"
-          "$DIR/runtime/Contents/Home/bin/java" \
-            --module-path "$DIR/javafx" \
-            --add-modules javafx.controls,javafx.fxml \
-            -jar "$DIR/app/app.jar"
-          SHEOF
+          printf '#!/bin/bash\nDIR="$(cd "$(dirname "$0")" && pwd)"\nexport DYLD_LIBRARY_PATH="$DIR/javafx:$DYLD_LIBRARY_PATH"\n"$DIR/runtime/Contents/Home/bin/java" --module-path "$DIR/javafx" --add-modules javafx.controls,javafx.fxml -jar "$DIR/app/app.jar"\n' > app-dist/LabelAnalyzer.sh
           chmod +x app-dist/LabelAnalyzer.sh
+          cd app-dist && zip -r "../LabelAnalyzer-macos-${{ steps.version.outputs.value }}.zip" .
 
-          cd app-dist
-          zip -r "../LabelAnalyzer-macos-${{ steps.version.outputs.value }}.zip" .
-
-      - name: Artifact feltöltése
+      - name: Artifact feltoltese
         uses: actions/upload-artifact@v5
         with:
           name: macos-zip
           path: LabelAnalyzer-macos-*.zip
           retention-days: 30
 
-  # ── macOS ARM ZIP ───────────────────────────────────────────────────────────
   build-macos-arm:
     name: macOS ARM ZIP
     runs-on: macos-14
@@ -347,16 +222,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: JDK 23 telepítése (ARM)
+      - name: JDK 23 telepitese
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '23'
 
-      - name: Maven build (Mac ARM profil)
+      - name: Maven build
         run: mvn -B package -P mac-aarch64 -DskipTests
 
-      - name: Verziószám meghatározása
+      - name: Verzioszam
         id: version
         run: |
           if [[ "${{ github.event_name }}" == "push" ]]; then
@@ -365,57 +240,43 @@ jobs:
             echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Fat jar megkeresése
+      - name: Fat jar megkeresese
         id: jarname
         run: |
           JAR=$(ls target/*.jar | grep -v "original" | head -1)
           echo "path=$JAR" >> $GITHUB_OUTPUT
 
-      - name: Temurin 23 JRE letöltése (macOS ARM)
+      - name: JRE letoltese
         run: |
           URL="https://github.com/adoptium/temurin23-binaries/releases/download/jdk-23.0.2%2B7/OpenJDK23U-jre_aarch64_mac_hotspot_23.0.2_7.tar.gz"
           curl -L -o jre.tar.gz "$URL"
           tar -xzf jre.tar.gz
-          JRE_DIR=$(ls -d */ | grep -i jdk | head -1)
-          mv "$JRE_DIR" runtime
+          mv $(ls -d */ | grep -i jdk | head -1) runtime
 
-      - name: JavaFX 23 SDK letöltése (macOS ARM)
+      - name: JavaFX SDK letoltese
         run: |
           URL="https://download2.gluonhq.com/openjfx/23.0.2/openjfx-23.0.2_osx-aarch64_bin-sdk.zip"
           curl -L -o javafx.zip "$URL"
           unzip -q javafx.zip
-          FX_DIR=$(ls -d */ | grep -i javafx | head -1)
-          mv "$FX_DIR" javafx-sdk
+          mv $(ls -d */ | grep -i javafx | head -1) javafx-sdk
 
-      - name: App mappa összerakása és ZIP
+      - name: App osszerakasa es ZIP
         run: |
           mkdir -p app-dist/runtime app-dist/app app-dist/javafx
           cp -r runtime/* app-dist/runtime/
           cp -r javafx-sdk/lib/* app-dist/javafx/
           cp "${{ steps.jarname.outputs.path }}" app-dist/app/app.jar
-
-          cat > app-dist/LabelAnalyzer.sh << 'SHEOF'
-          #!/bin/bash
-          DIR="$(cd "$(dirname "$0")" && pwd)"
-          export DYLD_LIBRARY_PATH="$DIR/javafx:$DYLD_LIBRARY_PATH"
-          "$DIR/runtime/Contents/Home/bin/java" \
-            --module-path "$DIR/javafx" \
-            --add-modules javafx.controls,javafx.fxml \
-            -jar "$DIR/app/app.jar"
-          SHEOF
+          printf '#!/bin/bash\nDIR="$(cd "$(dirname "$0")" && pwd)"\nexport DYLD_LIBRARY_PATH="$DIR/javafx:$DYLD_LIBRARY_PATH"\n"$DIR/runtime/Contents/Home/bin/java" --module-path "$DIR/javafx" --add-modules javafx.controls,javafx.fxml -jar "$DIR/app/app.jar"\n' > app-dist/LabelAnalyzer.sh
           chmod +x app-dist/LabelAnalyzer.sh
+          cd app-dist && zip -r "../LabelAnalyzer-macos-arm-${{ steps.version.outputs.value }}.zip" .
 
-          cd app-dist
-          zip -r "../LabelAnalyzer-macos-arm-${{ steps.version.outputs.value }}.zip" .
-
-      - name: Artifact feltöltése
+      - name: Artifact feltoltese
         uses: actions/upload-artifact@v5
         with:
           name: macos-arm-zip
           path: LabelAnalyzer-macos-arm-*.zip
           retention-days: 30
 
-  # ── GitHub Release ───────────────────────────────────────────────────────────
   release:
     name: GitHub Release
     needs: [build-windows, build-macos, build-macos-arm]
@@ -429,29 +290,29 @@ jobs:
       contents: write
 
     steps:
-      - name: Artifactok letöltése
+      - name: Artifactok letoltese
         uses: actions/download-artifact@v5
         with:
           path: artifacts
           merge-multiple: true
 
-      - name: GitHub Release létrehozása
+      - name: GitHub Release letrehozasa
         uses: softprops/action-gh-release@v2
         with:
           name: LabelAnalyzer ${{ github.ref_name }}
           body: |
             ## LabelAnalyzer ${{ github.ref_name }}
 
-            ### Letöltések – telepítés nem szükséges, csak csomagold ki!
+            ### Letoltesek - telepites nem szukseges, csak csomagold ki!
 
-            | Platform | Fájl | Indítás |
+            | Platform | Fajl | Inditas |
             |----------|------|---------|
-            | Windows 10/11 | `LabelAnalyzer-windows-*.zip` | `LabelAnalyzer.bat` |
-            | Windows (debug) | ugyanaz | `debug.bat` |
-            | macOS Intel | `LabelAnalyzer-macos-*.zip` | `LabelAnalyzer.sh` |
-            | macOS Apple Silicon | `LabelAnalyzer-macos-arm-*.zip` | `LabelAnalyzer.sh` |
+            | Windows 10/11 | LabelAnalyzer-windows-*.zip | LabelAnalyzer.exe |
+            | Windows debug | ugyanaz | debug.bat |
+            | macOS Intel | LabelAnalyzer-macos-*.zip | LabelAnalyzer.sh |
+            | macOS Apple Silicon | LabelAnalyzer-macos-arm-*.zip | LabelAnalyzer.sh |
 
-            > JRE és JavaFX telepítés nem szükséges – minden bele van csomagolva.
+            > JRE es JavaFX nem szukseges - minden bele van csomagolva.
           files: artifacts/**
           draft: false
           prerelease: false
