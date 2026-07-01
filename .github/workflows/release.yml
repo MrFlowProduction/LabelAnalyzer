@@ -79,14 +79,31 @@ jobs:
           Write-Host "runtime\bin tartalma:"
           Get-ChildItem "runtime\bin\" -Filter "*.exe" | Format-Table Name
 
+      - name: JavaFX SDK letöltése (Windows)
+        shell: pwsh
+        run: |
+          $url = "https://download2.gluonhq.com/openjfx/23.0.2/openjfx-23.0.2_windows-x64_bin-sdk.zip"
+          Write-Host "JavaFX SDK letöltése..."
+          Invoke-WebRequest -Uri $url -OutFile "javafx-sdk.zip"
+          Expand-Archive -Path "javafx-sdk.zip" -DestinationPath "javafx-temp"
+          $fxDir = (Get-ChildItem "javafx-temp" -Directory | Select-Object -First 1).FullName
+          Write-Host "JavaFX mappa: $fxDir"
+          Move-Item $fxDir "javafx-sdk"
+          Write-Host "JavaFX lib tartalma:"
+          Get-ChildItem "javafx-sdk\lib\" -Filter "*.jar" | Format-Table Name
+
       - name: App mappa összerakása
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "app-dist\runtime" -Force
           New-Item -ItemType Directory -Path "app-dist\app" -Force
+          New-Item -ItemType Directory -Path "app-dist\javafx" -Force
 
           # JRE bemásolása
           Copy-Item -Path "runtime\*" -Destination "app-dist\runtime" -Recurse
+
+          # JavaFX lib bemásolása
+          Copy-Item -Path "javafx-sdk\lib\*" -Destination "app-dist\javafx" -Recurse
 
           # Fat jar bemásolása
           $jarPath = "${{ steps.jarname.outputs.path }}"
@@ -94,6 +111,8 @@ jobs:
 
           Write-Host "app-dist\runtime\bin tartalma:"
           Get-ChildItem "app-dist\runtime\bin\" -Filter "*.exe" | Format-Table Name
+          Write-Host "app-dist\javafx tartalma:"
+          Get-ChildItem "app-dist\javafx\" -Filter "*.jar" | Format-Table Name
 
       - name: start.bat létrehozása
         shell: pwsh
