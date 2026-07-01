@@ -62,6 +62,12 @@ jobs:
             echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Fat jar átnevezése
+        shell: bash
+        run: |
+            mv target/label-analyzer-*-fat.jar target/label-analyzer-fat.jar ||
+            mv target/label-analyzer-fat.jar target/label-analyzer-fat.jar || true
+
       - name: jpackage – Windows EXE
         run: |
           jpackage `
