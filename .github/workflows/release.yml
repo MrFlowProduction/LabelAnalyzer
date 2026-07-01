@@ -23,9 +23,9 @@ on:
 
 jobs:
 
-  # ── Windows EXE ─────────────────────────────────────────────────────────────
+  # ── Windows ZIP (telepítő nélkül) ──────────────────────────────────────────
   build-windows:
-    name: Windows EXE
+    name: Windows ZIP
     runs-on: windows-latest
     if: |
       github.event_name == 'push' ||
@@ -45,17 +45,16 @@ jobs:
       - name: Maven build (Windows profil)
         run: mvn -B package -P win -DskipTests
 
-      - name: Target mappa tartalmának listázása
+      - name: Target mappa listázása
         shell: bash
         run: ls -la target/
 
-      - name: Fat jar megkeresése és átmásolása
+      - name: Fat jar átmásolása
         shell: bash
         run: |
           JAR=$(ls target/*.jar | grep -v "original" | head -1)
           echo "Talált jar: $JAR"
           cp "$JAR" target/label-analyzer-fat.jar
-          echo "Átmásolva: target/label-analyzer-fat.jar"
 
       - name: Verziószám meghatározása
         id: version
@@ -67,7 +66,7 @@ jobs:
             echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: jpackage – Windows EXE
+      - name: jpackage – app-image (telepítő nélküli mappa)
         shell: cmd
         run: |
           jpackage ^
@@ -76,24 +75,31 @@ jobs:
             --name LabelAnalyzer ^
             --app-version ${{ steps.version.outputs.value }} ^
             --vendor "MrFlow" ^
-            --description "Novenyvedoszer engedelyelemzo" ^
-            --type exe ^
-            --win-dir-chooser ^
-            --win-menu ^
-            --win-shortcut ^
+            --type app-image ^
             --dest dist ^
             --java-options "--add-modules javafx.controls,javafx.fxml"
+
+      - name: dist mappa listázása (debug)
+        shell: bash
+        run: ls -la dist/ && ls -la dist/LabelAnalyzer/ || true
+
+      - name: ZIP készítése
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "dist\LabelAnalyzer\*" `
+            -DestinationPath "dist\LabelAnalyzer-windows-${{ steps.version.outputs.value }}.zip"
 
       - name: Artifact feltöltése
         uses: actions/upload-artifact@v5
         with:
-          name: windows-exe
-          path: dist/*.exe
+          name: windows-zip
+          path: dist/*.zip
           retention-days: 30
 
-  # ── macOS Intel DMG ─────────────────────────────────────────────────────────
+  # ── macOS Intel ZIP ────────────────────────────────────────────────────────
   build-macos:
-    name: macOS Intel DMG
+    name: macOS Intel ZIP
     runs-on: macos-latest
     if: |
       github.event_name == 'push' ||
@@ -113,10 +119,7 @@ jobs:
       - name: Maven build (Mac profil)
         run: mvn -B package -P mac -DskipTests
 
-      - name: Target mappa tartalmának listázása
-        run: ls -la target/
-
-      - name: Fat jar megkeresése és átmásolása
+      - name: Fat jar átmásolása
         run: |
           JAR=$(ls target/*.jar | grep -v "original" | head -1)
           echo "Talált jar: $JAR"
@@ -131,7 +134,7 @@ jobs:
             echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: jpackage – macOS DMG
+      - name: jpackage – app-image
         run: |
           jpackage \
             --input target \
@@ -139,20 +142,25 @@ jobs:
             --name LabelAnalyzer \
             --app-version ${{ steps.version.outputs.value }} \
             --vendor "MrFlow" \
-            --type dmg \
+            --type app-image \
             --dest dist \
             --java-options "--add-modules javafx.controls,javafx.fxml"
+
+      - name: ZIP készítése
+        run: |
+          cd dist
+          zip -r "LabelAnalyzer-macos-${{ steps.version.outputs.value }}.zip" LabelAnalyzer.app
 
       - name: Artifact feltöltése
         uses: actions/upload-artifact@v5
         with:
-          name: macos-dmg
-          path: dist/*.dmg
+          name: macos-zip
+          path: dist/*.zip
           retention-days: 30
 
-  # ── macOS ARM DMG ───────────────────────────────────────────────────────────
+  # ── macOS ARM ZIP ──────────────────────────────────────────────────────────
   build-macos-arm:
-    name: macOS ARM DMG
+    name: macOS ARM ZIP
     runs-on: macos-14
     if: |
       github.event_name == 'push' ||
@@ -172,10 +180,7 @@ jobs:
       - name: Maven build (Mac ARM profil)
         run: mvn -B package -P mac-aarch64 -DskipTests
 
-      - name: Target mappa tartalmának listázása
-        run: ls -la target/
-
-      - name: Fat jar megkeresése és átmásolása
+      - name: Fat jar átmásolása
         run: |
           JAR=$(ls target/*.jar | grep -v "original" | head -1)
           echo "Talált jar: $JAR"
@@ -190,7 +195,7 @@ jobs:
             echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: jpackage – macOS ARM DMG
+      - name: jpackage – app-image
         run: |
           jpackage \
             --input target \
@@ -198,18 +203,23 @@ jobs:
             --name LabelAnalyzer \
             --app-version ${{ steps.version.outputs.value }} \
             --vendor "MrFlow" \
-            --type dmg \
+            --type app-image \
             --dest dist \
             --java-options "--add-modules javafx.controls,javafx.fxml"
+
+      - name: ZIP készítése
+        run: |
+          cd dist
+          zip -r "LabelAnalyzer-macos-arm-${{ steps.version.outputs.value }}.zip" LabelAnalyzer.app
 
       - name: Artifact feltöltése
         uses: actions/upload-artifact@v5
         with:
-          name: macos-arm-dmg
-          path: dist/*.dmg
+          name: macos-arm-zip
+          path: dist/*.zip
           retention-days: 30
 
-  # ── GitHub Release – csak tag esetén ────────────────────────────────────────
+  # ── GitHub Release – csak tag esetén ──────────────────────────────────────
   release:
     name: GitHub Release
     needs: [build-windows, build-macos, build-macos-arm]
@@ -236,16 +246,19 @@ jobs:
           body: |
             ## LabelAnalyzer ${{ github.ref_name }}
 
-            ### Letöltések
+            ### Letöltések – telepítés nem szükséges, csak csomagold ki!
+
             | Platform | Fájl |
             |----------|------|
-            | Windows 10/11 | `LabelAnalyzer-*.exe` |
-            | macOS Intel | `LabelAnalyzer-*-mac.dmg` |
-            | macOS Apple Silicon | `LabelAnalyzer-*-arm.dmg` |
+            | Windows 10/11 | `LabelAnalyzer-windows-*.zip` |
+            | macOS Intel | `LabelAnalyzer-macos-*.zip` |
+            | macOS Apple Silicon | `LabelAnalyzer-macos-arm-*.zip` |
 
-            ### Telepítés
-            **Windows:** Futtasd az `.exe` telepítőt – JRE nem szükséges.
-            **macOS:** Nyisd meg a `.dmg` fájlt és húzd az Applications mappába.
+            ### Használat
+            **Windows:** Csomagold ki a ZIP-et, majd futtasd a `LabelAnalyzer.exe` fájlt.
+            **macOS:** Csomagold ki a ZIP-et, majd húzd a `LabelAnalyzer.app`-ot az Applications mappába.
+
+            > JRE telepítés nem szükséges – a runtime bele van csomagolva.
           files: artifacts/**
           draft: false
           prerelease: false
