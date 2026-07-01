@@ -23,7 +23,7 @@ on:
 
 jobs:
 
-  # ── Windows ZIP – fat jar + JRE + start.bat ─────────────────────────────────
+  # ── Windows ZIP ─────────────────────────────────────────────────────────────
   build-windows:
     name: Windows ZIP
     runs-on: windows-latest
@@ -36,7 +36,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: JDK 21 telepítése (build)
+      - name: JDK 23 telepítése
         uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -62,87 +62,87 @@ jobs:
           JAR=$(ls target/*.jar | grep -v "original" | head -1)
           echo "Talált jar: $JAR"
           echo "path=$JAR" >> $GITHUB_OUTPUT
-          BASENAME=$(basename "$JAR")
-          echo "name=$BASENAME" >> $GITHUB_OUTPUT
 
-      - name: Windows JRE letöltése (Temurin 21)
+      - name: Temurin 23 JRE letöltése (Windows)
         shell: pwsh
         run: |
           $url = "https://github.com/adoptium/temurin23-binaries/releases/download/jdk-23.0.2%2B7/OpenJDK23U-jre_x64_windows_hotspot_23.0.2_7.zip"
           Write-Host "JRE letöltése..."
-          Invoke-WebRequest -Uri $url -OutFile "jre-windows.zip"
-          Write-Host "JRE kicsomagolása..."
-          Expand-Archive -Path "jre-windows.zip" -DestinationPath "jre-temp"
+          Invoke-WebRequest -Uri $url -OutFile "jre.zip"
+          Expand-Archive -Path "jre.zip" -DestinationPath "jre-temp"
           $jreDir = (Get-ChildItem "jre-temp" -Directory | Select-Object -First 1).FullName
-          Write-Host "JRE mappa: $jreDir"
           Move-Item $jreDir "runtime"
           Write-Host "runtime\bin tartalma:"
           Get-ChildItem "runtime\bin\" -Filter "*.exe" | Format-Table Name
 
-      - name: JavaFX SDK letöltése (Windows)
+      - name: JavaFX 23 SDK letöltése (Windows)
         shell: pwsh
         run: |
           $url = "https://download2.gluonhq.com/openjfx/23.0.2/openjfx-23.0.2_windows-x64_bin-sdk.zip"
           Write-Host "JavaFX SDK letöltése..."
-          Invoke-WebRequest -Uri $url -OutFile "javafx-sdk.zip"
-          Expand-Archive -Path "javafx-sdk.zip" -DestinationPath "javafx-temp"
+          Invoke-WebRequest -Uri $url -OutFile "javafx.zip"
+          Expand-Archive -Path "javafx.zip" -DestinationPath "javafx-temp"
           $fxDir = (Get-ChildItem "javafx-temp" -Directory | Select-Object -First 1).FullName
-          Write-Host "JavaFX mappa: $fxDir"
           Move-Item $fxDir "javafx-sdk"
-          Write-Host "JavaFX lib tartalma:"
+          Write-Host "javafx-sdk\lib tartalma:"
           Get-ChildItem "javafx-sdk\lib\" -Filter "*.jar" | Format-Table Name
+          Write-Host "javafx-sdk\bin tartalma (dll-ek):"
+          Get-ChildItem "javafx-sdk\bin\" -Filter "*.dll" | Format-Table Name
 
       - name: App mappa összerakása
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path "app-dist\runtime" -Force
-          New-Item -ItemType Directory -Path "app-dist\app" -Force
-          New-Item -ItemType Directory -Path "app-dist\javafx" -Force
+          New-Item -ItemType Directory -Path "app-dist\runtime" -Force | Out-Null
+          New-Item -ItemType Directory -Path "app-dist\app"     -Force | Out-Null
+          New-Item -ItemType Directory -Path "app-dist\javafx"  -Force | Out-Null
 
-          # JRE bemásolása
-          Copy-Item -Path "runtime\*" -Destination "app-dist\runtime" -Recurse
+          # JRE
+          Copy-Item -Path "runtime\*" -Destination "app-dist\runtime" -Recurse -Force
 
-          # JavaFX lib bemásolása
-          Copy-Item -Path "javafx-sdk\lib\*" -Destination "app-dist\javafx" -Recurse
+          # JavaFX: lib (jar-ok) + bin (dll-ek) → ugyanabba a javafx\ mappába
+          Copy-Item -Path "javafx-sdk\lib\*" -Destination "app-dist\javafx" -Recurse -Force
+          Copy-Item -Path "javafx-sdk\bin\*" -Destination "app-dist\javafx" -Recurse -Force
 
-          # Fat jar bemásolása
-          $jarPath = "${{ steps.jarname.outputs.path }}"
-          Copy-Item -Path $jarPath -Destination "app-dist\app\app.jar"
+          # Fat jar
+          Copy-Item -Path "${{ steps.jarname.outputs.path }}" -Destination "app-dist\app\app.jar"
 
-          Write-Host "app-dist\runtime\bin tartalma:"
+          Write-Host "=== Ellenőrzés ==="
+          Write-Host "runtime\bin exe-k:"
           Get-ChildItem "app-dist\runtime\bin\" -Filter "*.exe" | Format-Table Name
-          Write-Host "app-dist\javafx tartalma:"
+          Write-Host "javafx dll-ek:"
+          Get-ChildItem "app-dist\javafx\" -Filter "*.dll" | Format-Table Name
+          Write-Host "javafx jar-ok:"
           Get-ChildItem "app-dist\javafx\" -Filter "*.jar" | Format-Table Name
 
-      - name: start.bat létrehozása
+      - name: Batch fájlok létrehozása
         shell: pwsh
         run: |
-          $content = "@echo off`r`n"
-          $content += "cd /d `"%~dp0`"`r`n"
-          $content += "echo LabelAnalyzer inditasa...`r`n"
-          $content += "mkdir `"%USERPROFILE%\.labelanalyzer\logs`" 2>nul`r`n"
-          $content += "runtime\bin\javaw.exe ^`r`n"
-          $content += "  --add-modules javafx.controls,javafx.fxml ^`r`n"
-          $content += "  -jar `"app\app.jar`"`r`n"
-          [System.IO.File]::WriteAllText("app-dist\LabelAnalyzer.bat", $content, [System.Text.Encoding]::ASCII)
+          # ── LabelAnalyzer.bat – normál indítás (javaw, nincs konzol ablak) ──
+          $run = "@echo off" + [char]13 + [char]10
+          $run += "cd /d ""%~dp0""" + [char]13 + [char]10
+          $run += "set PATH=%~dp0javafx;%PATH%" + [char]13 + [char]10
+          $run += "mkdir ""%USERPROFILE%\.labelanalyzer\logs"" 2>nul" + [char]13 + [char]10
+          $run += "runtime\bin\javaw.exe --module-path ""javafx"" --add-modules javafx.controls,javafx.fxml -jar ""app\app.jar""" + [char]13 + [char]10
+          [System.IO.File]::WriteAllText("app-dist\LabelAnalyzer.bat", $run, [System.Text.Encoding]::ASCII)
 
-          # Debug verzio: konzol ablakkal es log fajllal
-          $debug = "@echo off`r`n"
-          $debug += "cd /d `"%~dp0`"`r`n"
-          $debug += "mkdir `"%USERPROFILE%\.labelanalyzer\logs`" 2>nul`r`n"
-          $debug += "echo Inditasi log: %USERPROFILE%\.labelanalyzer\logs\startup.log`r`n"
-          $debug += "runtime\bin\java.exe ^`r`n"
-          $debug += "  --add-modules javafx.controls,javafx.fxml ^`r`n"
-          $debug += "  -jar `"app\app.jar`" ^`r`n"
-          $debug += "  > `"%USERPROFILE%\.labelanalyzer\logs\startup.log`" 2>&1`r`n"
-          $debug += "echo Kilepes kodja: %ERRORLEVEL%`r`n"
-          $debug += "type `"%USERPROFILE%\.labelanalyzer\logs\startup.log`"`r`n"
-          $debug += "pause`r`n"
-          [System.IO.File]::WriteAllText("app-dist\debug.bat", $debug, [System.Text.Encoding]::ASCII)
+          # ── debug.bat – konzol + log fájl ──
+          $dbg = "@echo off" + [char]13 + [char]10
+          $dbg += "cd /d ""%~dp0""" + [char]13 + [char]10
+          $dbg += "set PATH=%~dp0javafx;%PATH%" + [char]13 + [char]10
+          $dbg += "mkdir ""%USERPROFILE%\.labelanalyzer\logs"" 2>nul" + [char]13 + [char]10
+          $dbg += "echo Inditom a LabelAnalyzert..." + [char]13 + [char]10
+          $dbg += "runtime\bin\java.exe --module-path ""javafx"" --add-modules javafx.controls,javafx.fxml -jar ""app\app.jar"" > ""%USERPROFILE%\.labelanalyzer\logs\startup.log"" 2>&1" + [char]13 + [char]10
+          $dbg += "echo." + [char]13 + [char]10
+          $dbg += "echo Kilepes kodja: %ERRORLEVEL%" + [char]13 + [char]10
+          $dbg += "echo Log: %USERPROFILE%\.labelanalyzer\logs\startup.log" + [char]13 + [char]10
+          $dbg += "echo." + [char]13 + [char]10
+          $dbg += "type ""%USERPROFILE%\.labelanalyzer\logs\startup.log""" + [char]13 + [char]10
+          $dbg += "pause" + [char]13 + [char]10
+          [System.IO.File]::WriteAllText("app-dist\debug.bat", $dbg, [System.Text.Encoding]::ASCII)
 
-          Write-Host "LabelAnalyzer.bat:"
+          Write-Host "=== LabelAnalyzer.bat ==="
           Get-Content "app-dist\LabelAnalyzer.bat"
-          Write-Host "debug.bat:"
+          Write-Host "=== debug.bat ==="
           Get-Content "app-dist\debug.bat"
 
       - name: ZIP készítése
@@ -174,7 +174,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: JDK 21 telepítése
+      - name: JDK 23 telepítése
         uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -196,31 +196,40 @@ jobs:
         id: jarname
         run: |
           JAR=$(ls target/*.jar | grep -v "original" | head -1)
-          echo "Talált jar: $JAR"
           echo "path=$JAR" >> $GITHUB_OUTPUT
 
-      - name: macOS JRE letöltése (Temurin 21)
+      - name: Temurin 23 JRE letöltése (macOS Intel)
         run: |
           URL="https://github.com/adoptium/temurin23-binaries/releases/download/jdk-23.0.2%2B7/OpenJDK23U-jre_x64_mac_hotspot_23.0.2_7.tar.gz"
-          curl -L -o jre-mac.tar.gz "$URL"
-          tar -xzf jre-mac.tar.gz
+          curl -L -o jre.tar.gz "$URL"
+          tar -xzf jre.tar.gz
           JRE_DIR=$(ls -d */ | grep -i jdk | head -1)
-          echo "JRE mappa: $JRE_DIR"
           mv "$JRE_DIR" runtime
+
+      - name: JavaFX 23 SDK letöltése (macOS Intel)
+        run: |
+          URL="https://download2.gluonhq.com/openjfx/23.0.2/openjfx-23.0.2_osx-x64_bin-sdk.zip"
+          curl -L -o javafx.zip "$URL"
+          unzip -q javafx.zip
+          FX_DIR=$(ls -d */ | grep -i javafx | head -1)
+          mv "$FX_DIR" javafx-sdk
 
       - name: App mappa összerakása és ZIP
         run: |
-          mkdir -p app-dist/runtime app-dist/app
+          mkdir -p app-dist/runtime app-dist/app app-dist/javafx
           cp -r runtime/* app-dist/runtime/
+          cp -r javafx-sdk/lib/* app-dist/javafx/
           cp "${{ steps.jarname.outputs.path }}" app-dist/app/app.jar
 
-          cat > app-dist/LabelAnalyzer.sh << 'EOF'
+          cat > app-dist/LabelAnalyzer.sh << 'SHEOF'
           #!/bin/bash
           DIR="$(cd "$(dirname "$0")" && pwd)"
+          export DYLD_LIBRARY_PATH="$DIR/javafx:$DYLD_LIBRARY_PATH"
           "$DIR/runtime/Contents/Home/bin/java" \
+            --module-path "$DIR/javafx" \
             --add-modules javafx.controls,javafx.fxml \
             -jar "$DIR/app/app.jar"
-          EOF
+          SHEOF
           chmod +x app-dist/LabelAnalyzer.sh
 
           cd app-dist
@@ -246,7 +255,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: JDK 21 telepítése (ARM)
+      - name: JDK 23 telepítése (ARM)
         uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -270,27 +279,38 @@ jobs:
           JAR=$(ls target/*.jar | grep -v "original" | head -1)
           echo "path=$JAR" >> $GITHUB_OUTPUT
 
-      - name: macOS ARM JRE letöltése (Temurin 21)
+      - name: Temurin 23 JRE letöltése (macOS ARM)
         run: |
           URL="https://github.com/adoptium/temurin23-binaries/releases/download/jdk-23.0.2%2B7/OpenJDK23U-jre_aarch64_mac_hotspot_23.0.2_7.tar.gz"
-          curl -L -o jre-mac-arm.tar.gz "$URL"
-          tar -xzf jre-mac-arm.tar.gz
+          curl -L -o jre.tar.gz "$URL"
+          tar -xzf jre.tar.gz
           JRE_DIR=$(ls -d */ | grep -i jdk | head -1)
           mv "$JRE_DIR" runtime
 
+      - name: JavaFX 23 SDK letöltése (macOS ARM)
+        run: |
+          URL="https://download2.gluonhq.com/openjfx/23.0.2/openjfx-23.0.2_osx-aarch64_bin-sdk.zip"
+          curl -L -o javafx.zip "$URL"
+          unzip -q javafx.zip
+          FX_DIR=$(ls -d */ | grep -i javafx | head -1)
+          mv "$FX_DIR" javafx-sdk
+
       - name: App mappa összerakása és ZIP
         run: |
-          mkdir -p app-dist/runtime app-dist/app
+          mkdir -p app-dist/runtime app-dist/app app-dist/javafx
           cp -r runtime/* app-dist/runtime/
+          cp -r javafx-sdk/lib/* app-dist/javafx/
           cp "${{ steps.jarname.outputs.path }}" app-dist/app/app.jar
 
-          cat > app-dist/LabelAnalyzer.sh << 'EOF'
+          cat > app-dist/LabelAnalyzer.sh << 'SHEOF'
           #!/bin/bash
           DIR="$(cd "$(dirname "$0")" && pwd)"
+          export DYLD_LIBRARY_PATH="$DIR/javafx:$DYLD_LIBRARY_PATH"
           "$DIR/runtime/Contents/Home/bin/java" \
+            --module-path "$DIR/javafx" \
             --add-modules javafx.controls,javafx.fxml \
             -jar "$DIR/app/app.jar"
-          EOF
+          SHEOF
           chmod +x app-dist/LabelAnalyzer.sh
 
           cd app-dist
@@ -335,11 +355,11 @@ jobs:
             | Platform | Fájl | Indítás |
             |----------|------|---------|
             | Windows 10/11 | `LabelAnalyzer-windows-*.zip` | `LabelAnalyzer.bat` |
-            | Windows (debug) | ugyanaz | `debug.bat` (konzol + log) |
+            | Windows (debug) | ugyanaz | `debug.bat` |
             | macOS Intel | `LabelAnalyzer-macos-*.zip` | `LabelAnalyzer.sh` |
             | macOS Apple Silicon | `LabelAnalyzer-macos-arm-*.zip` | `LabelAnalyzer.sh` |
 
-            > JRE telepítés nem szükséges – a runtime bele van csomagolva.
+            > JRE és JavaFX telepítés nem szükséges – minden bele van csomagolva.
           files: artifacts/**
           draft: false
           prerelease: false
