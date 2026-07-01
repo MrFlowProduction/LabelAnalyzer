@@ -1,10 +1,32 @@
 name: Release
 
-# Trigger: amikor git taget tolsz fel (pl. v1.0.0)
 on:
+  # Automatikus: tag feltölésekor
   push:
     tags:
       - 'v*'
+
+  # Kézi indítás a GitHub Actions felületéről
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Melyik platformra buildeljünk?'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - windows
+          - macos
+          - macos-arm
+      version:
+        description: 'Verziószám (pl. 1.0.0) – Release csak tag esetén jön létre'
+        required: false
+        default: 'dev'
+
+# ── Segéd expression-ök a platform szűréshez ──────────────────────────────
+# A job-ok "if" feltételével döntjük el melyik fut.
+# Automatikus tagnél mindig minden fut.
 
 jobs:
 
@@ -12,27 +34,41 @@ jobs:
   build-windows:
     name: Windows EXE
     runs-on: windows-latest
+    if: |
+      github.event_name == 'push' ||
+      inputs.platform == 'all' ||
+      inputs.platform == 'windows'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: JDK 23 telepítése
+      - name: JDK 21 telepítése
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '23'
+          java-version: '21'
 
       - name: Maven build (Windows profil)
         run: mvn -B package -P win -DskipTests
 
-      - name: jpackage – Windows EXE készítés
+      - name: Verziószám meghatározása
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "value=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: jpackage – Windows EXE
         run: |
           jpackage `
             --input target `
             --main-jar label-analyzer-fat.jar `
             --name LabelAnalyzer `
-            --app-version ${{ github.ref_name }} `
+            --app-version ${{ steps.version.outputs.value }} `
             --vendor "MrFlow" `
             --description "Növényvédő szer engedélyelemző" `
             --type exe `
@@ -47,11 +83,16 @@ jobs:
         with:
           name: windows-exe
           path: dist/*.exe
+          retention-days: 30
 
-  # ── macOS DMG ──────────────────────────────────────────────────────────────
+  # ── macOS Intel DMG ────────────────────────────────────────────────────────
   build-macos:
-    name: macOS DMG
-    runs-on: macos-latest   # GitHub-on ez x86; ARM: macos-14
+    name: macOS Intel DMG
+    runs-on: macos-latest
+    if: |
+      github.event_name == 'push' ||
+      inputs.platform == 'all' ||
+      inputs.platform == 'macos'
 
     steps:
       - name: Checkout
@@ -66,13 +107,22 @@ jobs:
       - name: Maven build (Mac profil)
         run: mvn -B package -P mac -DskipTests
 
-      - name: jpackage – macOS DMG készítés
+      - name: Verziószám meghatározása
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "value=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: jpackage – macOS DMG
         run: |
           jpackage \
             --input target \
             --main-jar label-analyzer-fat.jar \
             --name LabelAnalyzer \
-            --app-version ${{ github.ref_name }} \
+            --app-version ${{ steps.version.outputs.value }} \
             --vendor "MrFlow" \
             --type dmg \
             --dest dist \
@@ -83,11 +133,16 @@ jobs:
         with:
           name: macos-dmg
           path: dist/*.dmg
+          retention-days: 30
 
   # ── macOS ARM DMG ──────────────────────────────────────────────────────────
   build-macos-arm:
     name: macOS ARM DMG
-    runs-on: macos-14   # Apple Silicon runner
+    runs-on: macos-14
+    if: |
+      github.event_name == 'push' ||
+      inputs.platform == 'all' ||
+      inputs.platform == 'macos-arm'
 
     steps:
       - name: Checkout
@@ -102,13 +157,22 @@ jobs:
       - name: Maven build (Mac ARM profil)
         run: mvn -B package -P mac-aarch64 -DskipTests
 
-      - name: jpackage – macOS ARM DMG készítés
+      - name: Verziószám meghatározása
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "value=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: jpackage – macOS ARM DMG
         run: |
           jpackage \
             --input target \
             --main-jar label-analyzer-fat.jar \
             --name LabelAnalyzer \
-            --app-version ${{ github.ref_name }} \
+            --app-version ${{ steps.version.outputs.value }} \
             --vendor "MrFlow" \
             --type dmg \
             --dest dist \
@@ -119,34 +183,27 @@ jobs:
         with:
           name: macos-arm-dmg
           path: dist/*.dmg
+          retention-days: 30
 
-  # ── GitHub Release létrehozása ─────────────────────────────────────────────
+  # ── GitHub Release – csak tag esetén ──────────────────────────────────────
   release:
     name: GitHub Release
     needs: [build-windows, build-macos, build-macos-arm]
     runs-on: ubuntu-latest
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/v')
 
     permissions:
-      contents: write   # szükséges a release létrehozásához
+      contents: write
 
     steps:
-      - name: Windows artifact letöltése
+      - name: Artifactok letöltése
         uses: actions/download-artifact@v4
         with:
-          name: windows-exe
-          path: artifacts/windows
-
-      - name: macOS artifact letöltése
-        uses: actions/download-artifact@v4
-        with:
-          name: macos-dmg
-          path: artifacts/macos
-
-      - name: macOS ARM artifact letöltése
-        uses: actions/download-artifact@v4
-        with:
-          name: macos-arm-dmg
-          path: artifacts/macos-arm
+          path: artifacts
+          merge-multiple: true
 
       - name: GitHub Release létrehozása
         uses: softprops/action-gh-release@v2
@@ -163,14 +220,8 @@ jobs:
             | macOS Apple Silicon | `LabelAnalyzer-*-arm.dmg` |
 
             ### Telepítés
-            **Windows:** Futtasd az `.exe` telepítőt. JRE nem szükséges, bele van csomagolva.
+            **Windows:** Futtasd az `.exe` telepítőt – JRE nem szükséges.
             **macOS:** Nyisd meg a `.dmg` fájlt és húzd az Applications mappába.
-
-            ### Újdonságok
-            <!-- ide írd a változásokat -->
-          files: |
-            artifacts/windows/*.exe
-            artifacts/macos/*.dmg
-            artifacts/macos-arm/*.dmg
+          files: artifacts/**
           draft: false
           prerelease: false
