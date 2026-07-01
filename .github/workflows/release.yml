@@ -109,16 +109,30 @@ jobs:
           cp "$JAR" target/label-analyzer-fat.jar
 
       - name: LabelAnalyzer.exe generalasa Maven Launch4j pluginnel
-        shell: cmd
+        shell: pwsh
+        run: mvn -B com.akathist.maven.plugins.launch4j:launch4j-maven-plugin:2.5.0:launch4j
+
+      - name: LabelAnalyzer.exe atmasolasa app-dist-be
+        shell: pwsh
         run: |
-          mvn -B com.akathist.maven.plugins.launch4j:launch4j-maven-plugin:2.5.0:launch4j
-          if exist target\label-analyzer.exe (
-            copy target\label-analyzer.exe app-dist\LabelAnalyzer.exe
-            echo LabelAnalyzer.exe atmasolva app-dist-be
-          ) else (
-            echo HIBA: label-analyzer.exe nem jott letre a target mappaban
-            exit /b 1
-          )
+          $workdir = (Get-Location).Path
+          Write-Host "Working dir: $workdir"
+          Write-Host "=== target mappa tartalom ==="
+          Get-ChildItem "$workdir\target" | Format-Table Name, Length
+          Write-Host "=== exe fajlok ==="
+          $exeFiles = Get-ChildItem "$workdir\target" -Filter "*.exe"
+          Write-Host "Talalt exe-k: $($exeFiles.Count)"
+          $exeFiles | Format-Table Name, FullName
+          $exe = $exeFiles | Select-Object -First 1
+          if ($exe) {
+            Write-Host "Masolom: $($exe.FullName) -> $workdir\app-dist\LabelAnalyzer.exe"
+            Copy-Item $exe.FullName "$workdir\app-dist\LabelAnalyzer.exe" -Force
+            Write-Host "Masolas kesz, ellenorzom:"
+            Get-Item "$workdir\app-dist\LabelAnalyzer.exe" | Format-Table Name, Length
+          } else {
+            Write-Error "HIBA: Nem talalhato exe a target mappaban!"
+            exit 1
+          }
 
       - name: Batch fajlok generalasa
         shell: pwsh
