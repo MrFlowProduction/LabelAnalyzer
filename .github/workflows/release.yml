@@ -1,12 +1,9 @@
 name: Release
 
 on:
-  # Automatikus: tag feltölésekor
   push:
     tags:
       - 'v*'
-
-  # Kézi indítás a GitHub Actions felületéről
   workflow_dispatch:
     inputs:
       platform:
@@ -20,17 +17,13 @@ on:
           - macos
           - macos-arm
       version:
-        description: 'Verziószám (pl. 1.0.0) – Release csak tag esetén jön létre'
+        description: 'Verziószám (pl. 1.0.0)'
         required: false
         default: 'dev'
 
-# ── Segéd expression-ök a platform szűréshez ──────────────────────────────
-# A job-ok "if" feltételével döntjük el melyik fut.
-# Automatikus tagnél mindig minden fut.
-
 jobs:
 
-  # ── Windows EXE ────────────────────────────────────────────────────────────
+  # ── Windows EXE ─────────────────────────────────────────────────────────────
   build-windows:
     name: Windows EXE
     runs-on: windows-latest
@@ -43,14 +36,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: JDK 23 telepítése
+      - name: JDK 21 telepítése
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '23'
+          java-version: '21'
 
       - name: Maven build (Windows profil)
         run: mvn -B package -P win -DskipTests
+
+      - name: Target mappa tartalmának listázása
+        shell: bash
+        run: ls -la target/
+
+      - name: Fat jar megkeresése és átmásolása
+        shell: bash
+        run: |
+          JAR=$(ls target/*.jar | grep -v "original" | head -1)
+          echo "Talált jar: $JAR"
+          cp "$JAR" target/label-analyzer-fat.jar
+          echo "Átmásolva: target/label-analyzer-fat.jar"
 
       - name: Verziószám meghatározása
         id: version
@@ -62,25 +67,21 @@ jobs:
             echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Fat jar átnevezése
-        shell: bash
-        run: |
-          mv target/label-analyzer-*-fat.jar target/label-analyzer-fat.jar || mv target/label-analyzer-fat.jar target/label-analyzer-fat.jar || true
-
       - name: jpackage – Windows EXE
+        shell: cmd
         run: |
-          jpackage `
-            --input target `
-            --main-jar label-analyzer-fat.jar `
-            --name LabelAnalyzer `
-            --app-version ${{ steps.version.outputs.value }} `
-            --vendor "MrFlow" `
-            --description "Növényvédő szer engedélyelemző" `
-            --type exe `
-            --win-dir-chooser `
-            --win-menu `
-            --win-shortcut `
-            --dest dist `
+          jpackage ^
+            --input target ^
+            --main-jar label-analyzer-fat.jar ^
+            --name LabelAnalyzer ^
+            --app-version ${{ steps.version.outputs.value }} ^
+            --vendor "MrFlow" ^
+            --description "Novenyvedoszer engedelyelemzo" ^
+            --type exe ^
+            --win-dir-chooser ^
+            --win-menu ^
+            --win-shortcut ^
+            --dest dist ^
             --java-options "--add-modules javafx.controls,javafx.fxml"
 
       - name: Artifact feltöltése
@@ -90,7 +91,7 @@ jobs:
           path: dist/*.exe
           retention-days: 30
 
-  # ── macOS Intel DMG ────────────────────────────────────────────────────────
+  # ── macOS Intel DMG ─────────────────────────────────────────────────────────
   build-macos:
     name: macOS Intel DMG
     runs-on: macos-latest
@@ -103,14 +104,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: JDK 23 telepítése
+      - name: JDK 21 telepítése
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '23'
+          java-version: '21'
 
       - name: Maven build (Mac profil)
         run: mvn -B package -P mac -DskipTests
+
+      - name: Target mappa tartalmának listázása
+        run: ls -la target/
+
+      - name: Fat jar megkeresése és átmásolása
+        run: |
+          JAR=$(ls target/*.jar | grep -v "original" | head -1)
+          echo "Talált jar: $JAR"
+          cp "$JAR" target/label-analyzer-fat.jar
 
       - name: Verziószám meghatározása
         id: version
@@ -140,7 +150,7 @@ jobs:
           path: dist/*.dmg
           retention-days: 30
 
-  # ── macOS ARM DMG ──────────────────────────────────────────────────────────
+  # ── macOS ARM DMG ───────────────────────────────────────────────────────────
   build-macos-arm:
     name: macOS ARM DMG
     runs-on: macos-14
@@ -153,14 +163,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: JDK 23 telepítése (ARM)
+      - name: JDK 21 telepítése (ARM)
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '23'
+          java-version: '21'
 
       - name: Maven build (Mac ARM profil)
         run: mvn -B package -P mac-aarch64 -DskipTests
+
+      - name: Target mappa tartalmának listázása
+        run: ls -la target/
+
+      - name: Fat jar megkeresése és átmásolása
+        run: |
+          JAR=$(ls target/*.jar | grep -v "original" | head -1)
+          echo "Talált jar: $JAR"
+          cp "$JAR" target/label-analyzer-fat.jar
 
       - name: Verziószám meghatározása
         id: version
@@ -190,7 +209,7 @@ jobs:
           path: dist/*.dmg
           retention-days: 30
 
-  # ── GitHub Release – csak tag esetén ──────────────────────────────────────
+  # ── GitHub Release – csak tag esetén ────────────────────────────────────────
   release:
     name: GitHub Release
     needs: [build-windows, build-macos, build-macos-arm]
