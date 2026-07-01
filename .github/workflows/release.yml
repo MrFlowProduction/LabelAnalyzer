@@ -65,8 +65,7 @@ jobs:
       - name: Fat jar átnevezése
         shell: bash
         run: |
-            mv target/label-analyzer-*-fat.jar target/label-analyzer-fat.jar ||
-            mv target/label-analyzer-fat.jar target/label-analyzer-fat.jar || true
+          mv target/label-analyzer-*-fat.jar target/label-analyzer-fat.jar || mv target/label-analyzer-fat.jar target/label-analyzer-fat.jar || true
 
       - name: jpackage – Windows EXE
         run: |
