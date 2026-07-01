@@ -101,23 +101,14 @@ jobs:
           pip install pillow --quiet
           python scripts/make_ico.py
 
-      - name: Launch4j letoltese
-        shell: pwsh
-        run: |
-          $url = "https://sourceforge.net/projects/launch4j/files/launch4j-3/3.50/launch4j-3.50-win32.zip/download"
-          Invoke-WebRequest -Uri $url -OutFile "launch4j.zip" -UserAgent "Mozilla/5.0"
-          Expand-Archive -Path "launch4j.zip" -DestinationPath "."
-          Write-Host "Launch4j:"
-          Get-ChildItem "launch4j\" | Format-Table Name
-
       - name: Launch4j config generalasa
         shell: pwsh
         run: python scripts/make_launch4j_config.py "${{ steps.version.outputs.value }}"
 
-      - name: LabelAnalyzer.exe generalasa
+      - name: LabelAnalyzer.exe generalasa Maven Launch4j pluginnel
         shell: cmd
         run: |
-          launch4j\launch4jc.exe launch4j-config.xml
+          mvn -B com.akathist.maven.plugins.launch4j:launch4j-maven-plugin:2.5.0:launch4j -Dlaunch4j.configFile=launch4j-config.xml
           if exist app-dist\LabelAnalyzer.exe (
             echo LabelAnalyzer.exe elkeszult
           ) else (
