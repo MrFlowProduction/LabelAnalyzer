@@ -41,13 +41,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: JDK 21 telepítése
-        uses: actions/setup-java@v4
+      - name: JDK 23 telepítése
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '23'
 
       - name: Maven build (Windows profil)
         run: mvn -B package -P win -DskipTests
@@ -79,7 +79,7 @@ jobs:
             --java-options "--add-modules javafx.controls,javafx.fxml"
 
       - name: Artifact feltöltése
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: windows-exe
           path: dist/*.exe
@@ -96,13 +96,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: JDK 21 telepítése
-        uses: actions/setup-java@v4
+      - name: JDK 23 telepítése
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '23'
 
       - name: Maven build (Mac profil)
         run: mvn -B package -P mac -DskipTests
@@ -129,7 +129,7 @@ jobs:
             --java-options "--add-modules javafx.controls,javafx.fxml"
 
       - name: Artifact feltöltése
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: macos-dmg
           path: dist/*.dmg
@@ -146,13 +146,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: JDK 21 telepítése (ARM)
-        uses: actions/setup-java@v4
+      - name: JDK 23 telepítése (ARM)
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '23'
 
       - name: Maven build (Mac ARM profil)
         run: mvn -B package -P mac-aarch64 -DskipTests
@@ -179,7 +179,7 @@ jobs:
             --java-options "--add-modules javafx.controls,javafx.fxml"
 
       - name: Artifact feltöltése
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: macos-arm-dmg
           path: dist/*.dmg
@@ -200,7 +200,7 @@ jobs:
 
     steps:
       - name: Artifactok letöltése
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: artifacts
           merge-multiple: true
