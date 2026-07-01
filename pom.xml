@@ -142,7 +142,7 @@
             </plugin>
 
 
-            <!-- Launch4j – Windows launcher exe generálás -->
+            <!-- Launch4j – Windows launcher exe generalas -->
             <plugin>
                 <groupId>com.akathist.maven.plugins.launch4j</groupId>
                 <artifactId>launch4j-maven-plugin</artifactId>
@@ -154,10 +154,10 @@
                         <goals><goal>launch4j</goal></goals>
                         <configuration>
                             <headerType>gui</headerType>
-                            <outfile>${project.build.directory}/LabelAnalyzer.exe</outfile>
-                            <jar>${project.build.directory}/app/app.jar</jar>
+                            <outfile>${project.build.directory}/label-analyzer.exe</outfile>
+                            <jar>${project.build.directory}/label-analyzer-fat.jar</jar>
                             <errTitle>LabelAnalyzer</errTitle>
-                            <icon>${project.basedir}/src/main/resources/hu/mrflow/labelanalyzer/icon/app.ico</icon>
+                            <icon>${project.basedir}/app.ico</icon>
                             <classPath>
                                 <mainClass>hu.mrflow.labelanalyzer.MainApp</mainClass>
                             </classPath>
@@ -172,7 +172,7 @@
                             <versionInfo>
                                 <fileVersion>1.0.0.0</fileVersion>
                                 <txtFileVersion>1.0.0</txtFileVersion>
-                                <fileDescription>Növényvédő szer engedélyelemző</fileDescription>
+                                <fileDescription>Novenyvedoszer engedelyelemzo</fileDescription>
                                 <copyright>MrFlow</copyright>
                                 <productVersion>1.0.0.0</productVersion>
                                 <txtProductVersion>1.0.0</txtProductVersion>

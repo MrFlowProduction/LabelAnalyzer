@@ -101,18 +101,22 @@ jobs:
           pip install pillow --quiet
           python scripts/make_ico.py
 
-      - name: Launch4j config generalasa
-        shell: pwsh
-        run: python scripts/make_launch4j_config.py "${{ steps.version.outputs.value }}"
+      - name: Fat jar atnevezese Launch4j-hez
+        shell: bash
+        run: |
+          JAR=$(ls target/*.jar | grep -v "original" | head -1)
+          echo "Jar: $JAR"
+          cp "$JAR" target/label-analyzer-fat.jar
 
       - name: LabelAnalyzer.exe generalasa Maven Launch4j pluginnel
         shell: cmd
         run: |
-          mvn -B com.akathist.maven.plugins.launch4j:launch4j-maven-plugin:2.5.0:launch4j -Dlaunch4j.configFile=launch4j-config.xml
-          if exist app-dist\LabelAnalyzer.exe (
-            echo LabelAnalyzer.exe elkeszult
+          mvn -B com.akathist.maven.plugins.launch4j:launch4j-maven-plugin:2.5.0:launch4j
+          if exist target\label-analyzer.exe (
+            copy target\label-analyzer.exe app-dist\LabelAnalyzer.exe
+            echo LabelAnalyzer.exe atmasolva app-dist-be
           ) else (
-            echo HIBA: LabelAnalyzer.exe nem jott letre
+            echo HIBA: label-analyzer.exe nem jott letre a target mappaban
             exit /b 1
           )
 
