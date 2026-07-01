@@ -12,6 +12,10 @@ import javafx.stage.Stage;
 import java.awt.Taskbar;
 import java.awt.Toolkit;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import atlantafx.base.theme.PrimerDark;
 
@@ -65,7 +69,46 @@ public class MainApp extends Application {
     }
 
     public static void main(String[] args) {
-        launch(args);
+        // Korai hibafogó – mielőtt bármi más inicializálódna
+        Thread.setDefaultUncaughtExceptionHandler((thread, ex) -> {
+            try {
+                Path logDir = Path.of(System.getProperty("user.home"), ".labelanalyzer", "logs");
+                Files.createDirectories(logDir);
+                Path crashLog = logDir.resolve("crash.log");
+
+                StringWriter sw = new StringWriter();
+                ex.printStackTrace(new PrintWriter(sw));
+
+                Files.writeString(crashLog,
+                        "=== CRASH " + java.time.LocalDateTime.now() + " ===\n" +
+                                "Thread: " + thread.getName() + "\n" +
+                                "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.arch") + "\n" +
+                                "Java: " + System.getProperty("java.version") + "\n" +
+                                "JavaFX: " + System.getProperty("javafx.version", "N/A") + "\n\n" +
+                                sw + "\n",
+                        java.nio.file.StandardOpenOption.CREATE,
+                        java.nio.file.StandardOpenOption.APPEND);
+            } catch (Exception ignored) {}
+        });
+
+        // Saját try-catch a launch() köré
+        try {
+            launch(args);
+        } catch (Throwable t) {
+            try {
+                Path logDir = Path.of(System.getProperty("user.home"), ".labelanalyzer", "logs");
+                Files.createDirectories(logDir);
+
+                StringWriter sw = new StringWriter();
+                t.printStackTrace(new PrintWriter(sw));
+
+                Files.writeString(logDir.resolve("crash.log"),
+                        "=== LAUNCH ERROR " + java.time.LocalDateTime.now() + " ===\n" +
+                                sw + "\n",
+                        java.nio.file.StandardOpenOption.CREATE,
+                        java.nio.file.StandardOpenOption.APPEND);
+            } catch (Exception ignored) {}
+        }
     }
 }
 
