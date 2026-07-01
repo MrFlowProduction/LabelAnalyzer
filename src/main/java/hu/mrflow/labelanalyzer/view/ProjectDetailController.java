@@ -4,6 +4,7 @@ import hu.mrflow.labelanalyzer.viewmodel.AnalysisResultViewModel;
 import hu.mrflow.labelanalyzer.viewmodel.ProjectDetailViewModel;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseButton;
 import javafx.stage.FileChooser;
 
 import java.io.File;
@@ -38,6 +39,14 @@ public class ProjectDetailController {
 
         // ── Egyirányú bindingok (ViewModel → UI) ──────────────────────────
         projectNameLabel.textProperty().bind(detailVm.projectNameProperty());
+
+        // Dupla kattintás a fejléc nevére → inline átnevezés
+        projectNameLabel.setTooltip(new Tooltip("Dupla kattintás az átnevezéshez"));
+        projectNameLabel.setOnMouseClicked(e -> {
+            if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2) {
+                onRenameProject();
+            }
+        });
 
         // Fájl label: fájlnév vagy üzenet
         oldDecisionLabel.textProperty().bind(
@@ -83,6 +92,14 @@ public class ProjectDetailController {
     @FXML
     private void onRunAnalysis() {
         detailViewModel.runAnalysis();
+    }
+
+    private void onRenameProject() {
+        TextInputDialog dialog = new TextInputDialog(detailViewModel.projectNameProperty().get());
+        dialog.setTitle("Átnevezés");
+        dialog.setHeaderText(null);
+        dialog.setContentText("Projekt neve:");
+        dialog.showAndWait().ifPresent(detailViewModel::renameCurrentProject);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

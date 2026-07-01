@@ -1,0 +1,176 @@
+name: Release
+
+# Trigger: amikor git taget tolsz fel (pl. v1.0.0)
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+
+  # ── Windows EXE ────────────────────────────────────────────────────────────
+  build-windows:
+    name: Windows EXE
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 23 telepítése
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '23'
+
+      - name: Maven build (Windows profil)
+        run: mvn -B package -P win -DskipTests
+
+      - name: jpackage – Windows EXE készítés
+        run: |
+          jpackage `
+            --input target `
+            --main-jar label-analyzer-fat.jar `
+            --name LabelAnalyzer `
+            --app-version ${{ github.ref_name }} `
+            --vendor "MrFlow" `
+            --description "Növényvédő szer engedélyelemző" `
+            --type exe `
+            --win-dir-chooser `
+            --win-menu `
+            --win-shortcut `
+            --dest dist `
+            --java-options "--add-modules javafx.controls,javafx.fxml"
+
+      - name: Artifact feltöltése
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/*.exe
+
+  # ── macOS DMG ──────────────────────────────────────────────────────────────
+  build-macos:
+    name: macOS DMG
+    runs-on: macos-latest   # GitHub-on ez x86; ARM: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 21 telepítése
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Maven build (Mac profil)
+        run: mvn -B package -P mac -DskipTests
+
+      - name: jpackage – macOS DMG készítés
+        run: |
+          jpackage \
+            --input target \
+            --main-jar label-analyzer-fat.jar \
+            --name LabelAnalyzer \
+            --app-version ${{ github.ref_name }} \
+            --vendor "MrFlow" \
+            --type dmg \
+            --dest dist \
+            --java-options "--add-modules javafx.controls,javafx.fxml"
+
+      - name: Artifact feltöltése
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: dist/*.dmg
+
+  # ── macOS ARM DMG ──────────────────────────────────────────────────────────
+  build-macos-arm:
+    name: macOS ARM DMG
+    runs-on: macos-14   # Apple Silicon runner
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 21 telepítése (ARM)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Maven build (Mac ARM profil)
+        run: mvn -B package -P mac-aarch64 -DskipTests
+
+      - name: jpackage – macOS ARM DMG készítés
+        run: |
+          jpackage \
+            --input target \
+            --main-jar label-analyzer-fat.jar \
+            --name LabelAnalyzer \
+            --app-version ${{ github.ref_name }} \
+            --vendor "MrFlow" \
+            --type dmg \
+            --dest dist \
+            --java-options "--add-modules javafx.controls,javafx.fxml"
+
+      - name: Artifact feltöltése
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm-dmg
+          path: dist/*.dmg
+
+  # ── GitHub Release létrehozása ─────────────────────────────────────────────
+  release:
+    name: GitHub Release
+    needs: [build-windows, build-macos, build-macos-arm]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # szükséges a release létrehozásához
+
+    steps:
+      - name: Windows artifact letöltése
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-exe
+          path: artifacts/windows
+
+      - name: macOS artifact letöltése
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: artifacts/macos
+
+      - name: macOS ARM artifact letöltése
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-arm-dmg
+          path: artifacts/macos-arm
+
+      - name: GitHub Release létrehozása
+        uses: softprops/action-gh-release@v2
+        with:
+          name: LabelAnalyzer ${{ github.ref_name }}
+          body: |
+            ## LabelAnalyzer ${{ github.ref_name }}
+
+            ### Letöltések
+            | Platform | Fájl |
+            |----------|------|
+            | Windows 10/11 | `LabelAnalyzer-*.exe` |
+            | macOS Intel | `LabelAnalyzer-*-mac.dmg` |
+            | macOS Apple Silicon | `LabelAnalyzer-*-arm.dmg` |
+
+            ### Telepítés
+            **Windows:** Futtasd az `.exe` telepítőt. JRE nem szükséges, bele van csomagolva.
+            **macOS:** Nyisd meg a `.dmg` fájlt és húzd az Applications mappába.
+
+            ### Újdonságok
+            <!-- ide írd a változásokat -->
+          files: |
+            artifacts/windows/*.exe
+            artifacts/macos/*.dmg
+            artifacts/macos-arm/*.dmg
+          draft: false
+          prerelease: false

@@ -3,6 +3,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 .kotlin
+*.class
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
@@ -37,3 +38,12 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# Lokális konfiguráció (API kulcsok!)
+# A ~/.labelanalyzer/ mappa sosem kerül a repóba,
+# de ha valaki véletlenül a projekt mappájába mentene valamit:
+*.properties
+config.json
+
+# jpackage kimenet
+dist/

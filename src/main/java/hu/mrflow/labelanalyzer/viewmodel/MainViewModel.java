@@ -46,6 +46,16 @@ public class MainViewModel extends BaseViewModel {
             }
         });
 
+        // Projekt mentésekor (pl. átnevezés a fejlécben) frissítsd a lista celláját
+        detailViewModel.setOnProjectSaved(() -> {
+            AnalysisProject p = listViewModel.getSelectedProject();
+            if (p == null) return;
+            int idx = listViewModel.getProjects().indexOf(p);
+            if (idx >= 0) {
+                listViewModel.getProjects().set(idx, p);
+            }
+        });
+
         detailViewModel.loadProject(listViewModel.getSelectedProject());
     }
 

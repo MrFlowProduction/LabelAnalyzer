@@ -7,8 +7,6 @@ import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.*;
 import javafx.concurrent.Task;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
@@ -34,8 +32,6 @@ public class ProjectDetailViewModel extends BaseViewModel {
 
     // Callback a listanézet frissítéséhez mentés után
     private Runnable onProjectSaved;
-
-    private static final Logger log = LoggerFactory.getLogger(ProjectDetailViewModel.class);
 
     public ProjectDetailViewModel(AnalysisResultViewModel resultViewModel) {
         this.resultViewModel = resultViewModel;
@@ -102,6 +98,15 @@ public class ProjectDetailViewModel extends BaseViewModel {
         if (onProjectSaved != null) onProjectSaved.run();
     }
 
+    /** Az aktuális projekt átnevezése (pl. a fejléc dupla kattintásos szerkesztéséből hívva). */
+    public void renameCurrentProject(String newName) {
+        if (currentProject == null || newName == null || newName.isBlank()) return;
+        String trimmed = newName.trim();
+        currentProject.setName(trimmed);
+        projectName.set(trimmed);
+        saveCurrentProject();
+    }
+
     // ── Elemzés futtatása ─────────────────────────────────────────────────────
 
     public void runAnalysis() {
@@ -129,19 +134,19 @@ public class ProjectDetailViewModel extends BaseViewModel {
         task.setOnSucceeded(e -> {
             running.set(false);
             progress.set(1.0);
+            currentProject.setStatus("Done");
+            currentProject.setLastRun(java.time.LocalDateTime.now());
             resultViewModel.loadResult(currentProject.getResult());
-            saveCurrentProject();
+            saveCurrentProject();  // projekt meta + eredmény is mentve
         });
 
         task.setOnFailed(e -> {
             running.set(false);
-            if(currentProject != null) currentProject.setStatus("Error");
+            currentProject.setStatus("Error");
             String msg = task.getException() != null
                     ? task.getException().getMessage() : "Ismeretlen hiba";
             errorMessage.set(msg);
             statusMessage.set("Hiba: " + msg);
-            log.error(msg);
-
         });
 
         Thread t = new Thread(task, "analysis-thread");
